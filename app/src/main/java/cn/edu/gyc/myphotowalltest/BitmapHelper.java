@@ -41,17 +41,5 @@ public class BitmapHelper {
         options.inJustDecodeBounds = false;
         return BitmapFactory.decodeResource(res, resId, options);
     }
-    public static Bitmap decodeSampledBitmapFromInputStream(InputStream inputStream, int resId,
-                                                            int reqWidth, int reqHeight) {
-        // 第一次解析将inJustDecodeBounds设置为true，来获取图片大小
-        final BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inJustDecodeBounds = true;
-       // BitmapFactory.decodeResource(res, resId, options);
-        BitmapFactory.decodeStream(inputStream,new Rect(),options);
-        // 调用上面定义的方法计算inSampleSize值
-        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
-        // 使用获取到的inSampleSize值再次解析图片
-        options.inJustDecodeBounds = false;
-        return BitmapFactory.decodeResource(res, resId, options);
-    }
+
 }

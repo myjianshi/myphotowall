@@ -26,6 +26,7 @@ import java.util.Set;
 public class PhotoWallAdapter extends BaseAdapter implements OnScrollListener{
     private Set<BitmapTask> bitmapTaskSet;
     private LruCache<String,Bitmap> bitmapLruCache;
+   // private DiskLruCache diskLruCache;
     private final Context context;
     private final String[] imgUrls;
     private GridView gridView;
