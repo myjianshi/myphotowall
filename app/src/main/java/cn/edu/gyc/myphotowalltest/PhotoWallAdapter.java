@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
+import android.os.Environment;
 import android.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,8 +15,19 @@ import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
 
+import com.jakewharton.disklrucache.DiskLruCache;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileDescriptor;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -26,7 +38,7 @@ import java.util.Set;
 public class PhotoWallAdapter extends BaseAdapter implements OnScrollListener{
     private Set<BitmapTask> bitmapTaskSet;
     private LruCache<String,Bitmap> bitmapLruCache;
-   // private DiskLruCache diskLruCache;
+    private DiskLruCache diskLruCache;
     private final Context context;
     private final String[] imgUrls;
     private GridView gridView;
@@ -52,15 +64,74 @@ public class PhotoWallAdapter extends BaseAdapter implements OnScrollListener{
         };
         */
         bitmapLruCache=new LruCache<>(cacheSize);
+
+        try{
+            File cacheDir=getDiskCacheDir(context,"imgs");
+            if(!cacheDir.exists()){
+                cacheDir.mkdirs();
+            }
+            diskLruCache=DiskLruCache.open(cacheDir,1,1,50*1024*1024);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
         gridView.setOnScrollListener(this);
     }
 
+    public File getDiskCacheDir(Context context, String thumb) {
+        String cachePath="";
+        if(Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())
+                || !Environment.isExternalStorageRemovable()){
+            cachePath=context.getExternalCacheDir().getPath();
+        }else {
+            cachePath=context.getCacheDir().getPath();
+        }
+        return new File(cachePath+File.pathSeparator+thumb);
+    }
+    /**
+     * 使用MD5算法对传入的key进行加密并返回。
+     */
+    public String hashKeyForDisk(String key) {
+        String cacheKey;
+        try {
+            final MessageDigest mDigest = MessageDigest.getInstance("MD5");
+            mDigest.update(key.getBytes());
+            cacheKey = bytesToHexString(mDigest.digest());
+        } catch (NoSuchAlgorithmException e) {
+            cacheKey = String.valueOf(key.hashCode());
+        }
+        return cacheKey;
+    }
+
+    /**
+     * 将缓存记录同步到journal文件中。
+     */
+    public void fluchCache() {
+        if (diskLruCache != null) {
+            try {
+                diskLruCache.flush();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private String bytesToHexString(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < bytes.length; i++) {
+            String hex = Integer.toHexString(0xFF & bytes[i]);
+            if (hex.length() == 1) {
+                sb.append('0');
+            }
+            sb.append(hex);
+        }
+        return sb.toString();
+    }
     class BitmapTask extends AsyncTask<String,Void,Bitmap>{
 
         private String imageUrl;
 
         @Override
-        protected Bitmap doInBackground(String... strings) {
+      /*  protected Bitmap doInBackground(String... strings) {
             imageUrl=strings[0];
             Bitmap bitmap=downlaodBitmap(imageUrl);
             if(bitmap!=null){
@@ -68,7 +139,57 @@ public class PhotoWallAdapter extends BaseAdapter implements OnScrollListener{
             }
             return bitmap;
         }
-
+ */
+        protected Bitmap doInBackground(String... params) {
+            imageUrl = params[0];
+            FileDescriptor fileDescriptor = null;
+            FileInputStream fileInputStream = null;
+            DiskLruCache.Snapshot snapShot = null;
+            try {
+                // 生成图片URL对应的key
+                final String key = hashKeyForDisk(imageUrl);
+                // 查找key对应的缓存
+                snapShot = diskLruCache.get(key);
+                if (snapShot == null) {
+                    // 如果没有找到对应的缓存，则准备从网络上请求数据，并写入缓存
+                    DiskLruCache.Editor editor = diskLruCache.edit(key);
+                    if (editor != null) {
+                        OutputStream outputStream = editor.newOutputStream(0);
+                        if (downloadUrlToStream(imageUrl, outputStream)) {
+                            editor.commit();
+                        } else {
+                            editor.abort();
+                        }
+                    }
+                    // 缓存被写入后，再次查找key对应的缓存
+                    snapShot = diskLruCache.get(key);
+                }
+                if (snapShot != null) {
+                    fileInputStream = (FileInputStream) snapShot.getInputStream(0);
+                    fileDescriptor = fileInputStream.getFD();
+                }
+                // 将缓存数据解析成Bitmap对象
+                Bitmap bitmap = null;
+                if (fileDescriptor != null) {
+                    bitmap = BitmapFactory.decodeFileDescriptor(fileDescriptor);
+                }
+                if (bitmap != null) {
+                    // 将Bitmap对象添加到内存缓存当中
+                    addBitmapToMemoryCache(params[0], bitmap);
+                }
+                return bitmap;
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                if (fileDescriptor == null && fileInputStream != null) {
+                    try {
+                        fileInputStream.close();
+                    } catch (IOException e) {
+                    }
+                }
+            }
+            return null;
+        }
         @Override
         protected void onPostExecute(Bitmap bitmap) {
             super.onPostExecute(bitmap);
@@ -98,6 +219,48 @@ public class PhotoWallAdapter extends BaseAdapter implements OnScrollListener{
             return bitmap;
         }
     }
+
+    private void addBitmapToMemoryCache(String key, Bitmap bitmap) {
+        if (bitmapLruCache.get(key) == null) {
+            bitmapLruCache.put(key, bitmap);
+        }
+    }
+
+
+    private boolean downloadUrlToStream(String imageUrl, OutputStream outputStream) {
+        HttpURLConnection urlConnection = null;
+        BufferedOutputStream out = null;
+        BufferedInputStream in = null;
+        try {
+            final URL url = new URL(imageUrl);
+            urlConnection = (HttpURLConnection) url.openConnection();
+            in = new BufferedInputStream(urlConnection.getInputStream(), 8 * 1024);
+            out = new BufferedOutputStream(outputStream, 8 * 1024);
+            int b;
+            while ((b = in.read()) != -1) {
+                out.write(b);
+            }
+            return true;
+        } catch (final IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (urlConnection != null) {
+                urlConnection.disconnect();
+            }
+            try {
+                if (out != null) {
+                    out.close();
+                }
+                if (in != null) {
+                    in.close();
+                }
+            } catch (final IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return false;
+    }
+
 
     private void addBitmapToCache(String imageUrl, Bitmap bitmap) {
         if(getBitmapFormCache(imageUrl)==null){

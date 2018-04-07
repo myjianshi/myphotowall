@@ -3,7 +3,7 @@ package cn.edu.gyc.myphotowalltest;
 public class Images {
 
     public final static String[] imageThumbUrls = new String[]{
-        /*    "http://192.168.46.1/[Be]2016.03.28%20No.1272%20Tammy[44P348M]/0000.jpg",
+            "http://192.168.46.1/[Be]2016.03.28%20No.1272%20Tammy[44P348M]/0000.jpg",
             "http://192.168.46.1/[Be]2016.03.28%20No.1272%20Tammy[44P348M]/0001.jpg",
             "http://192.168.46.1/[Be]2016.03.28%20No.1272%20Tammy[44P348M]/0002.jpg",
             "http://192.168.46.1/[Be]2016.03.28%20No.1272%20Tammy[44P348M]/0003.jpg",
@@ -36,8 +36,8 @@ public class Images {
             "http://192.168.46.1/[Be]2016.03.28%20No.1272%20Tammy[44P348M]/0030.jpg",
             "http://192.168.46.1/[Be]2016.03.28%20No.1272%20Tammy[44P348M]/0031.jpg",
             "http://192.168.46.1/[Be]2016.03.28%20No.1272%20Tammy[44P348M]/0032.jpg"
-            */
-            "http://img.my.csdn.net/uploads/201407/26/1406383299_1976.jpg",
+
+           /* "http://img.my.csdn.net/uploads/201407/26/1406383299_1976.jpg",
             "http://img.my.csdn.net/uploads/201407/26/1406383291_6518.jpg",
             "http://img.my.csdn.net/uploads/201407/26/1406383291_8239.jpg",
             "http://img.my.csdn.net/uploads/201407/26/1406383290_9329.jpg",
@@ -122,6 +122,6 @@ public class Images {
             "http://img.my.csdn.net/uploads/201407/26/1406382766_4924.jpg",
             "http://img.my.csdn.net/uploads/201407/26/1406382766_5762.jpg",
             "http://img.my.csdn.net/uploads/201407/26/1406382765_7341.jpg"
-
+ */
     };
 }
