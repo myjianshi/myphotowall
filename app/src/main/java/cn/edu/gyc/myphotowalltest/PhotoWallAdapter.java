@@ -62,6 +62,7 @@ public class PhotoWallAdapter extends BaseAdapter implements OnScrollListener{
         this.firstVisibleImageIndex=firstVisibleImageIndex;
         this.visibleImageCount=visibleImageCount;
 
+
         if(isFirstEnter&&visibleImageCount>0){
            // loadBitmaps(firstVisibleImageIndex,visibleImageCount);
             //loadImageView(firstVisibleImageIndex,visibleImageCount);
