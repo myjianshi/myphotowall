@@ -140,6 +140,8 @@ public class PhotoWallAdapter extends BaseAdapter implements OnScrollListener{
             return bitmap;
         }
  */
+
+
         protected Bitmap doInBackground(String... params) {
             imageUrl = params[0];
             FileDescriptor fileDescriptor = null;
@@ -171,7 +173,8 @@ public class PhotoWallAdapter extends BaseAdapter implements OnScrollListener{
                 // 将缓存数据解析成Bitmap对象
                 Bitmap bitmap = null;
                 if (fileDescriptor != null) {
-                    bitmap = BitmapFactory.decodeFileDescriptor(fileDescriptor);
+                 //   bitmap = BitmapFactory.decodeFileDescriptor(fileDescriptor);
+                    bitmap=BitmapHelper.decodeSampledBitmapFromFileDescriptor(fileDescriptor,120,120);
                 }
                 if (bitmap != null) {
                     // 将Bitmap对象添加到内存缓存当中

@@ -3,9 +3,8 @@ package cn.edu.gyc.myphotowalltest;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Rect;
 
-import java.io.InputStream;
+import java.io.FileDescriptor;
 
 /**
  * Created by Administrator on 2018/4/6.
@@ -42,4 +41,18 @@ public class BitmapHelper {
         return BitmapFactory.decodeResource(res, resId, options);
     }
 
+
+    public static Bitmap decodeSampledBitmapFromFileDescriptor(FileDescriptor fd,
+                                                               int reqWidth, int reqHeight) {
+        // 第一次解析将inJustDecodeBounds设置为true，来获取图片大小
+        final BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+
+        BitmapFactory.decodeFileDescriptor(fd,null,options);
+        // 调用上面定义的方法计算inSampleSize值
+        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
+        // 使用获取到的inSampleSize值再次解析图片
+        options.inJustDecodeBounds = false;
+        return BitmapFactory.decodeFileDescriptor(fd,null, options);
+    }
 }
